@@ -25,7 +25,7 @@ fn unix_days_to_ymd(mut days: i64) -> (i32, u32, u32) {
     let mp = (5 * doy + 2) / 153;
     let d = doy - (153 * mp + 2) / 5 + 1;
     let m = mp + if mp < 10 { 3 } else { -9 };
-    let year = y + (m <= 2) as i32;
+    let year = y as i32 + (m <= 2) as i32;
 
     (year as i32, m as u32, d as u32)
 }

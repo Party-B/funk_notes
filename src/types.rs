@@ -1,58 +1,57 @@
-mod timestamp;
-use timestamp::*;
+
+use crate::timestamp::now_timestamp;
 use std::fs;
 use std::path::Path;
 
-const COUNTER_FILE: &str = "data/next_id.txt";
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-struct Milestones {
-
-    id: u32,
-    description: String,
-    date: u64,
-}
+const COUNTER_FILE: &str = "data/funk_metadata.txt";
 
 pub enum Command {
-
-    New(String),
-    Add(String),
-    Delete(String),
-    Merge(String, String),
-    Drop,
-    Push(String, String),
-    Pop(String, String),
-
+    New { title: String, description: String },
+    AddMilestone { note_id: usize, description: String },
+    DeleteNote { note_id: usize },
+    // ...other commands
 }
 
-pub struct Funk_note {
+#[derive(Debug, Clone, PartialEq)]
+struct Milestone {
+
+    id: usize,
+    title: String,
+    description: String,
+    date: u64,
+    completed: bool,
+    completed_on: Option<u64>,
+}
+
+pub struct Funknote {
 
     pub id: usize,
-    pub active: bool,
     pub title: String,
+    pub description: String,   
     pub created_on: u64,
-    pub milestone: Vec<Milestones>,
-    pub description: String,
+    pub milestone: Vec<Milestone>,
+    pub active: bool,
 
 }
 
-impl Funk_note {
+impl Funknote {
 
-    pub fn new(title: &str, description: &str) -> Funk_note {
-        Funk_note {
-            id: get_next_id(),
-            active = true,
-            title,
-            created_on: Timestamp::now(),
+    pub fn new(title: &str, description: &str) -> Funknote {
+        Funknote {
+            id: get_next_id().expect("REASON"),
+            active: true,
+            title: title.to_string(),
+            created_on: now_timestamp(),
             milestone: Vec::new(),
-            description,
+            description: description.to_string(),
             
         }
     }
+
 }
 
 /// Read next ID from counter file, increment file, return the ID.
-pub fn get_next_id() -> usize {
+pub fn get_next_id() -> Result<usize, std::io::Error> {
     // Make sure file exists. If not, create it with "1".
     if !Path::new(COUNTER_FILE).exists() {
         fs::write(COUNTER_FILE, "1").expect("Failed to create counter file");
@@ -69,6 +68,6 @@ pub fn get_next_id() -> usize {
     fs::write(COUNTER_FILE, next.to_string())
         .expect("Failed to write counter file");
 
-    current
+    Ok(current)
 }
 
