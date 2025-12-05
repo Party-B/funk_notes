@@ -1,0 +1,25 @@
+
+
+(note.id{id}.{active}.start)
+
+{id}.title: {title}
+
+{id}.description: {description}
+
+{id}.date: {created_on}
+
+    (milestone.id{m_id}.start)
+
+        {id}-{m_id}.title: {m_title}
+
+        {id}-{m_id}.description: {m_description}
+        
+        {id}-{m_id}.date: {m_date}
+        
+        {id}-{m_id}.completed: {m_completed}
+        
+        {id}-{m_id}.completed_on: {m_completed_on}
+
+    (milteston.id{m_id}.end)
+
+(note.id{}.end)
