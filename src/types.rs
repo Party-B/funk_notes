@@ -6,7 +6,7 @@ use std::io::{self, Write};
 use std::env;
 
 // Constants
-const METADATA_FILE: &str = "data/funk_metadata.txt";
+const METADATA_FILE: &str = "funk_metadata.txt";
 const SPLIT_CODE: &str = "(note.id";
 const FILE_PATH: &str = "all_notes.txt";
 
@@ -60,21 +60,31 @@ impl Funknote {
 pub fn get_next_id() -> Result<usize, std::io::Error> {
     // Make sure file exists. If not, create it with "1".
     if !Path::new(METADATA_FILE).exists() {
-        fs::write(METADATA_FILE, "1").expect("Failed to create counter file");
+        fs::write(METADATA_FILE, base_meta(1))?;
+        return Ok(1 as usize);
     }
-
-    let contents = fs::read_to_string(METADATA_FILE)
-        .expect("Failed to read counter file");
-
-    let current: usize = contents.trim().parse()
-        .expect("Counter file does not contain a valid number");
-
-    // Increment and save
-    let next = current + 1;
-    fs::write(METADATA_FILE, next.to_string())
-        .expect("Failed to write counter file");
-
-    Ok(current)
+    
+    let contents = fs::read_to_string(METADATA_FILE)?;  // ← Use ?
+    
+    let value: i64 = contents
+        .split_once('=')
+        .and_then(|(_, right)| right.trim_end_matches(')').parse::<i64>().ok())
+        .ok_or_else(|| std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "Invalid counter format"
+        ))?;
+    
+    let value = value + 1;
+    
+    // Safe conversion with validation
+    let value_usize = usize::try_from(value)
+        .map_err(|_| std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "Counter value out of range"
+        ))?;
+    
+    fs::write(METADATA_FILE, base_meta(value))?;  // ← Use ?
+    Ok(value_usize)
 }
 
 fn base_note(id: i64, title: &str) -> String {
@@ -89,6 +99,14 @@ fn base_note(id: i64, title: &str) -> String {
 {id}.date:
 
 (note.id{id}.end)
+"#)
+}
+
+fn base_meta(id: i64) -> String {
+    // Using a raw string literal - no escaping needed
+   format!( r#"
+(next.id={id})
+
 "#)
 }
 
