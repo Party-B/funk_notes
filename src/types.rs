@@ -77,7 +77,7 @@ pub fn get_next_id() -> Result<usize, std::io::Error> {
     Ok(current)
 }
 
-fn formatted_string(id: i64, title: &str) -> String {
+fn base_note(id: i64, title: &str) -> String {
     // Using a raw string literal - no escaping needed
    format!( r#"
 (note.id{id}.start)
