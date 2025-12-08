@@ -43,7 +43,7 @@ pub struct Funknote {
 impl Funknote {
 
     pub fn new(title: &str, description: &str) -> Funknote {
-        Funknote {
+        let note = Funknote {
             id: get_next_id().expect("REASON"),
             active: true,
             title: title.to_string(),
@@ -51,9 +51,16 @@ impl Funknote {
             milestone: Vec::new(),
             description: description.to_string(),
             
-        }
+        };
+        write_funknote_to_file(&note).expect("Failed to write funk note to file");
+        return note;
     }
+}
 
+pub fn write_funknote_to_file(note: &Funknote) -> io::Result<()> {
+    
+    let note_str = base_note(note);
+    append_to_file(FILE_PATH, &note_str)
 }
 
 /// Read next ID from counter file, increment file, return the ID.
@@ -87,18 +94,27 @@ pub fn get_next_id() -> Result<usize, std::io::Error> {
     Ok(value_usize)
 }
 
-fn base_note(id: i64, title: &str) -> String {
+fn base_note(note: &Funknote) -> String {
+    // First build a local set of variables to fill the format string
+    let id = note.id;
+    let status = if note.active { "active" } else { "inactive" };
+    let title = &note.title;
+    let description = &note.description;
+    let created_on = note.created_on;
+
     // Using a raw string literal - no escaping needed
    format!( r#"
-(note.id{id}.start)
+(note.id{id}.{status}.start)
 
 {id}.title: {title}
 
-{id}.description:
+{id}.description: {description}
 
-{id}.date:
+{id}.date: {created_on}
 
-(note.id{id}.end)
+    ##### Milestones
+
+(note.id.{id}.end)
 "#)
 }
 
