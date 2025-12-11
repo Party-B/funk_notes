@@ -15,6 +15,7 @@ pub enum Command {
     New { title: String, description: String },
     AddMilestone { note_id: usize, description: String },
     DeleteNote { note_id: usize },
+    ListNotes,
     // ...other commands
 }
 
@@ -71,7 +72,7 @@ pub fn get_next_id() -> Result<usize, std::io::Error> {
         return Ok(1 as usize);
     }
     
-    let contents = fs::read_to_string(METADATA_FILE)?;  // ← Use ?
+    let contents = fs::read_to_string(METADATA_FILE)?.trim().to_string();  // ← Use ?
     
     let value: i64 = contents
         .split_once('=')
@@ -120,10 +121,8 @@ fn base_note(note: &Funknote) -> String {
 
 fn base_meta(id: i64) -> String {
     // Using a raw string literal - no escaping needed
-   format!( r#"
-(next.id={id})
-
-"#)
+    // Need to put in identifier for 'primary note' attribute
+   format!( r#"(next.id={id})"#)
 }
 
 fn append_to_file(file_path: &str, content: &str) -> io::Result<()> {
@@ -138,17 +137,93 @@ fn append_to_file(file_path: &str, content: &str) -> io::Result<()> {
 fn read_from_file(file_path: &str) -> io::Result<String> {
     fs::read_to_string(file_path)
 }
-fn chunked(text: &str, chunkno: i64) -> Option<String> {
-    if chunkno < 1 { return None }
+
+/// Parse a single note chunk into a Funknote struct
+fn parse_note_chunk(chunk: &str, id: usize) -> Result<Funknote, String> {
+    // Split the chunk into lines for parsing
+    let lines: Vec<&str> = chunk.lines().collect();
     
-    text.split(SPLIT_CODE)
-        .nth(chunkno as usize)
-        .map(|s| s.to_string())
+    let mut title = String::new();
+    let mut description = String::new();
+    let mut created_on: u64 = 0;
+    let mut active = true;
+    
+    // Parse the status from the first line if it exists
+    if let Some(first_line) = lines.first() {
+        if first_line.contains("inactive") {
+            active = false;
+        }
+    }
+    
+    // Parse each line looking for our fields
+    for line in lines {
+        let line = line.trim();
+        
+        if line.contains(".title:") {
+            title = line.split_once(".title:")
+                .map(|(_, t)| t.trim().to_string())
+                .unwrap_or_default();
+        } else if line.contains(".description:") {
+            description = line.split_once(".description:")
+                .map(|(_, d)| d.trim().to_string())
+                .unwrap_or_default();
+        } else if line.contains(".date:") {
+            created_on = line.split_once(".date:")
+                .and_then(|(_, d)| d.trim().parse::<u64>().ok())
+                .unwrap_or(0);
+        }
+    }
+    
+    // Validate we got the essential fields
+    if title.is_empty() {
+        return Err(format!("Note {} missing title", id));
+    }
+    
+    Ok(Funknote {
+        id,
+        title,
+        description,
+        created_on,
+        milestone: Vec::new(),
+        active,
+    })
 }
 
-fn next_chunk(file: &str) -> io::Result<i64> {
-    let content = read_from_file(file).unwrap_or_default();  // Empty string if error
-    Ok(content.split(SPLIT_CODE).count() as i64)
+/// Read all notes from the file and return them as a vector
+pub fn list_all_notes() -> io::Result<Vec<Funknote>> {
+    // Check if file exists first
+    if !Path::new(FILE_PATH).exists() {
+        return Ok(Vec::new()); // Return empty vector if no notes exist yet
+    }
+    
+    let contents = fs::read_to_string(FILE_PATH)?;
+    
+    // Split by the delimiter and collect into funknotes
+    let notes: Vec<Funknote> = contents
+        .split(SPLIT_CODE)
+        .enumerate()
+        .skip(1) // Skip first empty chunk before first delimiter
+        .filter_map(|(idx, chunk)| {
+            // Extract the ID from the chunk itself
+            let id = chunk
+                .lines()
+                .find(|line| line.contains(".title:"))
+                .and_then(|line| {
+                    line.split('.')
+                        .next()
+                        .and_then(|s| s.trim().parse::<usize>().ok())
+                })?;
+            
+            // Parse the chunk, log errors but continue
+            match parse_note_chunk(chunk, id) {
+                Ok(note) => Some(note),
+                Err(e) => {
+                    eprintln!("Warning: Failed to parse note: {}", e);
+                    None
+                }
+            }
+        })
+        .collect();
+    
+    Ok(notes)
 }
-
-
