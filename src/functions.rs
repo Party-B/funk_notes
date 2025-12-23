@@ -91,6 +91,33 @@ impl MethodRegistry {
         );
 
         registry.register_with_spec(
+            "list",
+            vec![
+                // First arg either ident or literal
+                ArgSpec::Either(vec![
+                    ArgSpec::Identifier(vec![
+                    "project".to_string(),
+                    "object".to_string(),
+                    "item".to_string(),
+                    "milestone".to_string(),
+                ]),
+                ArgSpec::Literal,
+            ]),
+        ],
+        vec![
+            // Optional second arg must be literal
+            ArgSpec::Literal,
+        ],
+        "Lists all the children of the specified identifier.",
+        vec![
+            "list(\"My Project\")             # Lists children of project (default)".to_string(),
+            "list(object, \"My Object\")      # Lists obeject".to_string(),
+            "list(milestone, \"Release 1.0\") # Lists milstone".to_string(),
+        ],
+        method_list
+        );
+
+        registry.register_with_spec(
             "title",
             vec![ArgSpec::Literal],
             vec![],
@@ -409,6 +436,52 @@ fn method_delete(_state: &mut FunkState, args: &[ASTNode]) -> Result<(), String>
         _ => Err("new() expects 1 or 2 arguments".to_string()),
     }
 }
+
+fn method_list(_state: &mut FunkState, args: &[ASTNode]) -> Result<(), String> {
+    
+    match args.len() {
+        0 => Err("new() requires at least a name: list(\"name\") or new(type, \"name\")".to_string()),
+        
+        1 => {
+            // Only one arg - must be a literal (the name)
+            match &args[0] {
+                ASTNode::Literal(name) => {
+                    println!("Listing all children of project (default) with name: {}", name);
+                    Ok(())
+                }
+                ASTNode::Identifier(_) => {
+                    Err("new() with one argument expects a quoted string name".to_string())
+                }
+                _ => Err("Invalid argument type".to_string()),
+            }
+        }
+        
+        2 => {
+            // Two args - identifier (type) + literal (name)
+            let note_type = match &args[0] {
+                ASTNode::Identifier(type_id) => {
+                    // Validate the type
+                    match type_id.as_str() {
+                        "project" | "object" | "item" | "milestone" => type_id.clone(),
+                        _ => return Err(format!("Unknown type '{}'. Valid types: project, object, item, milestone", type_id)),
+                    }
+                }
+                _ => return Err("First argument must be an identifier (type)".to_string()),
+            };
+            
+            let name = match &args[1] {
+                ASTNode::Literal(n) => n.clone(),
+                _ => return Err("Second argument must be a quoted string (name)".to_string()),
+            };
+            
+            println!("Listing children of {} with name: {}", note_type, name);
+            Ok(())
+        }
+        
+        _ => Err("new() expects 1 or 2 arguments".to_string()),
+    }
+}
+
 
 // End delete method
 
