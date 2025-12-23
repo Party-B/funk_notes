@@ -1,6 +1,9 @@
 mod interpret;
 mod types;
 mod functions;
+mod timestamp;
+mod storage;
+mod operations;
 
 use crate::functions::{handle_input, MethodRegistry};
 use crate::interpret::interpret;
@@ -21,7 +24,7 @@ fn main() {
     } else if !full_input.is_empty() {
         let mut state = FunkState::new();
         match interpret(&full_input) {
-            Ok(ast) => handle_input(ast, &mut state, &registry),
+            Ok(ast) => functions::handle_input(ast, &mut state, &registry),
             Err(e) => println!("Error: {}", e),
         }
     } else {

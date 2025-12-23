@@ -127,7 +127,9 @@ impl MethodRegistry {
             ],
             method_title
         );
-        
+       
+
+        // Add method registries above here.
         registry
     }
     
