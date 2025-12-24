@@ -1,94 +1,60 @@
 use crate::timestamp::now_timestamp;
 use crate::storage::*;
 
-#[derive(Debug, Clone)]
-pub struct FunkState {
+// ============ The Hierarchy ============
 
-    pub title: String
-    
-}
-
-impl FunkState {
-
-    pub fn new() -> Self {
-        Self {
-            title: String::from("New"),
-        }
-    }
-}
-
-#[derive(Debug)]
 pub struct Project {
-
-    pub name: String,
-
-}
-
-impl Project {
-
-    pub fn new(name: &str) -> Self {
-        Self {
-            //id: 
-            name: name.to_string(),
-
-        }
-    }
-}
-
-pub struct Funknote {
-
     pub id: usize,
     pub title: String,
-    pub description: String,   
+    pub description: String,
     pub created_on: u64,
-    pub milestone: Vec<Milestone>,
     pub active: bool,
-
-}
-
-impl Funknote {
-
-    pub fn new(title: &str, description: &str) -> Funknote {
-        let note = Funknote {
-            id: get_next_id().expect("REASON"),
-            active: true,
-            title: title.to_string(),
-            created_on: now_timestamp(),
-            milestone: Vec::new(),
-            description: description.to_string(),
-            
-        };
-        write_funknote_to_file(&note).expect("Failed to write funk note to file");
-        return note;
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Milestone {
-
-    id: usize,
-    title: String,
-    description: String,
-    date: u64,
-    completed: bool,
-    completed_on: Option<u64>,
+    pub objects: Vec<usize>,      // IDs of child objects
+    pub milestones: Vec<usize>,   // IDs of milestones
 }
 
 pub struct Object {
-
     pub id: usize,
+    pub project_id: usize,        // Which project owns this?
     pub title: String,
-    pub description: String,   
+    pub description: String,
     pub created_on: u64,
-
+    pub active: bool,
+    pub items: Vec<usize>,        // IDs of child items
 }
 
 pub struct Item {
-
     pub id: usize,
+    pub object_id: usize,         // Which object owns this?
     pub text: String,
     pub created_on: u64,
-
+    pub completed: bool,
+    pub completed_on: Option<u64>,
 }
 
+pub struct Milestone {
+    pub id: usize,
+    pub project_id: usize,        // Always belongs to a project
+    pub title: String,
+    pub description: String,
+    pub target_date: u64,
+    pub completed: bool,
+    pub completed_on: Option<u64>,
+    pub target: MilestoneTarget,  // What does this milestone track?
+}
 
+// What can a milestone point to?
+#[derive(Debug, Clone, PartialEq)]
+pub enum MilestoneTarget {
+    Project(usize),     // Milestone for the whole project
+    Object(usize),      // Milestone for a specific object
+    Item(usize),        // Milestone for a specific item
+}
+
+// ============ Application State ============
+
+pub struct FunkState {
+    pub current_project_id: Option<usize>,  // Which project are we in?
+    pub current_object_id: Option<usize>,   // Which object are we in?
+    // Maybe later: pub history: Vec<usize>,  // Navigation history
+}

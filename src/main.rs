@@ -22,9 +22,8 @@ fn main() {
     if full_input.contains("shell()") || full_input == "shell" {
         run_shell(registry);
     } else if !full_input.is_empty() {
-        let mut state = FunkState::new();
         match interpret(&full_input) {
-            Ok(ast) => functions::handle_input(ast, &mut state, &registry),
+            Ok(ast) => functions::handle_input(ast, &registry),
             Err(e) => println!("Error: {}", e),
         }
     } else {
@@ -35,7 +34,6 @@ fn main() {
 }
 
 fn run_shell(registry: MethodRegistry) {
-    let mut state = FunkState::new();
     println!("Entering funk_notes shell.");
     println!("Available methods: {:?}", registry.list_methods());
     println!("Prefix with '?' to just parse without executing.\n");
@@ -66,7 +64,7 @@ fn run_shell(registry: MethodRegistry) {
                 }
             } else {
                 match interpret(input) {
-                    Ok(ast) => functions::handle_input(ast, &mut state, &registry),
+                    Ok(ast) => functions::handle_input(ast, &registry),
                     Err(e) => println!("✗ {}\n", e),
                 }
             }

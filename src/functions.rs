@@ -1,7 +1,6 @@
 use crate::interpret::ASTNode;
-use crate::types::FunkState;
+use crate::operations::{self, *};
 use std::collections::HashMap;
-
 
 // Argument specification for a method parameter
 #[derive(Clone, Debug)]
@@ -13,7 +12,7 @@ pub enum ArgSpec {
 }
 
 // Type alias for method functions
-type MethodFn = fn(&mut FunkState, &[ASTNode]) -> Result<(), String>;
+type MethodFn = fn(&[ASTNode]) -> Result<(), String>;
 
 #[derive(Clone, Debug)]
 pub struct MethodSignature {
@@ -88,6 +87,7 @@ impl MethodRegistry {
             "delete(milestone, \"Release 1.0\") # Delete milstone".to_string(),
         ],
         method_delete
+        
         );
 
         registry.register_with_spec(
@@ -155,7 +155,7 @@ impl MethodRegistry {
         );
     }
 
-    pub fn execute(&self, name: &str, state: &mut FunkState, args: &[ASTNode]) -> Result<(), String> {
+    pub fn execute(&self, name: &str, args: &[ASTNode]) -> Result<(), String> {
         match self.methods.get(name) {
             Some(signature) => {
                 // Check if the first argument is the help identifier
@@ -171,7 +171,7 @@ impl MethodRegistry {
                 
                 // Normal execution path - validate then execute
                 self.validate_args(signature, args)?;
-                (signature.func)(state, args)
+                (signature.func)(args)
             }
             None => Err(format!("Unknown method: {}", name)),
         }
@@ -350,148 +350,67 @@ fn format_arg_spec(spec: &ArgSpec) -> String {
 
 // ============ Method Implementations ============
 
-fn method_new(_state: &mut FunkState, args: &[ASTNode]) -> Result<(), String> {
+// === Handler for type and name
+fn parse_type_and_name(args: &[ASTNode]) -> Result<(String, String), String> {
     match args.len() {
-        0 => Err("new() requires at least a name: new(\"name\") or new(type, \"name\")".to_string()),
+        0 => Err("Expected at least 1 argument".to_string()),
         
         1 => {
-            // Only one arg - must be a literal (the name)
+            // One arg: must be a literal (name), type defaults to "project"
             match &args[0] {
-                ASTNode::Literal(name) => {
-                    println!("Creating new project (default) with name: {}", name);
-                    Ok(())
-                }
-                ASTNode::Identifier(_) => {
-                    Err("new() with one argument expects a quoted string name".to_string())
-                }
-                _ => Err("Invalid argument type".to_string()),
+                ASTNode::Literal(name) => Ok(("project".to_string(), name.clone())),
+                _ => Err("Single argument must be a quoted string name".to_string()),
             }
         }
         
         2 => {
-            // Two args - identifier (type) + literal (name)
+            // Two args: type + name
             let note_type = match &args[0] {
-                ASTNode::Identifier(type_id) => {
-                    // Validate the type
-                    match type_id.as_str() {
-                        "project" | "object" | "item" | "milestone" => type_id.clone(),
-                        _ => return Err(format!("Unknown type '{}'. Valid types: project, object, item, milestone", type_id)),
-                    }
-                }
-                _ => return Err("First argument must be an identifier (type)".to_string()),
+                ASTNode::Identifier(id) => id.clone(),
+                _ => return Err("First argument must be a type identifier".to_string()),
             };
             
             let name = match &args[1] {
                 ASTNode::Literal(n) => n.clone(),
-                _ => return Err("Second argument must be a quoted string (name)".to_string()),
+                _ => return Err("Second argument must be a quoted string".to_string()),
             };
             
-            println!("Creating new {} with name: {}", note_type, name);
-            Ok(())
+            Ok((note_type, name))
         }
         
-        _ => Err("new() expects 1 or 2 arguments".to_string()),
-    }
-}
-
-fn method_delete(_state: &mut FunkState, args: &[ASTNode]) -> Result<(), String> {
-    
-    match args.len() {
-        0 => Err("new() requires at least a name: new(\"name\") or new(type, \"name\")".to_string()),
-        
-        1 => {
-            // Only one arg - must be a literal (the name)
-            match &args[0] {
-                ASTNode::Literal(name) => {
-                    println!("Deleting project (default) with name: {}", name);
-                    Ok(())
-                }
-                ASTNode::Identifier(_) => {
-                    Err("new() with one argument expects a quoted string name".to_string())
-                }
-                _ => Err("Invalid argument type".to_string()),
-            }
-        }
-        
-        2 => {
-            // Two args - identifier (type) + literal (name)
-            let note_type = match &args[0] {
-                ASTNode::Identifier(type_id) => {
-                    // Validate the type
-                    match type_id.as_str() {
-                        "project" | "object" | "item" | "milestone" => type_id.clone(),
-                        _ => return Err(format!("Unknown type '{}'. Valid types: project, object, item, milestone", type_id)),
-                    }
-                }
-                _ => return Err("First argument must be an identifier (type)".to_string()),
-            };
-            
-            let name = match &args[1] {
-                ASTNode::Literal(n) => n.clone(),
-                _ => return Err("Second argument must be a quoted string (name)".to_string()),
-            };
-            
-            println!("Deleting {} with name: {}", note_type, name);
-            Ok(())
-        }
-        
-        _ => Err("new() expects 1 or 2 arguments".to_string()),
-    }
-}
-
-fn method_list(_state: &mut FunkState, args: &[ASTNode]) -> Result<(), String> {
-    
-    match args.len() {
-        0 => Err("new() requires at least a name: list(\"name\") or new(type, \"name\")".to_string()),
-        
-        1 => {
-            // Only one arg - must be a literal (the name)
-            match &args[0] {
-                ASTNode::Literal(name) => {
-                    println!("Listing all children of project (default) with name: {}", name);
-                    Ok(())
-                }
-                ASTNode::Identifier(_) => {
-                    Err("new() with one argument expects a quoted string name".to_string())
-                }
-                _ => Err("Invalid argument type".to_string()),
-            }
-        }
-        
-        2 => {
-            // Two args - identifier (type) + literal (name)
-            let note_type = match &args[0] {
-                ASTNode::Identifier(type_id) => {
-                    // Validate the type
-                    match type_id.as_str() {
-                        "project" | "object" | "item" | "milestone" => type_id.clone(),
-                        _ => return Err(format!("Unknown type '{}'. Valid types: project, object, item, milestone", type_id)),
-                    }
-                }
-                _ => return Err("First argument must be an identifier (type)".to_string()),
-            };
-            
-            let name = match &args[1] {
-                ASTNode::Literal(n) => n.clone(),
-                _ => return Err("Second argument must be a quoted string (name)".to_string()),
-            };
-            
-            println!("Listing children of {} with name: {}", note_type, name);
-            Ok(())
-        }
-        
-        _ => Err("new() expects 1 or 2 arguments".to_string()),
+        _ => Err("Expected 1 or 2 arguments".to_string()),
     }
 }
 
 
-// End delete method
+// ===== Method calls =====
+// Now each method just parses then does its thing
+fn method_new(args: &[ASTNode]) -> Result<(), String> {
+    let (note_type, name) = parse_type_and_name(args)?;
+    //println!("Creating new {} with name: {}", note_type, name);
+    operations::new_method(&note_type, &name);
+    // Future: operations::create_note(&note_type, &name)?;
+    Ok(())
+}
 
-fn method_title(state: &mut FunkState, args: &[ASTNode]) -> Result<(), String> {
+fn method_delete(args: &[ASTNode]) -> Result<(), String> {
+    let (note_type, name) = parse_type_and_name(args)?;
+    println!("Deleting {} with name: {}", note_type, name);
+    // Future: operations::delete_note(&note_type, &name)?;
+    Ok(())
+}
+
+fn method_list(args: &[ASTNode]) -> Result<(), String> {
+    let (note_type, name) = parse_type_and_name(args)?;
+    println!("Listing children of {} with name: {}", note_type, name);
+    // Future: operations::list_children(&note_type, &name)?;
+    Ok(())
+}
+fn method_title(args: &[ASTNode]) -> Result<(), String> {
     // Validation already done by registry
     if let ASTNode::Literal(title) = &args[0] {
-        state.title = title.clone();
-        println!("Set title to: {}", state.title);
+        
+        println!("Set title to: something");
         Ok(())
     } else {
         Err("title() expects a string literal".to_string())
@@ -501,11 +420,11 @@ fn method_title(state: &mut FunkState, args: &[ASTNode]) -> Result<(), String> {
 
 // ============ Main Handler ============
 
-pub fn handle_input(ast: ASTNode, state: &mut FunkState, registry: &MethodRegistry) {
+pub fn handle_input(ast: ASTNode, registry: &MethodRegistry) {
     match ast {
         ASTNode::MethodChain(calls) => {
             for call in calls {
-                if let Err(e) = execute_method(call, state, registry) {
+                if let Err(e) = execute_method(call, registry) {
                     println!("Error: {}", e);
                     break;
                 }
@@ -515,10 +434,10 @@ pub fn handle_input(ast: ASTNode, state: &mut FunkState, registry: &MethodRegist
     }
 }
 
-fn execute_method(node: ASTNode, state: &mut FunkState, registry: &MethodRegistry) -> Result<(), String> {
+fn execute_method(node: ASTNode, registry: &MethodRegistry) -> Result<(), String> {
     match node {
         ASTNode::MethodCall { name, args } => {
-            registry.execute(&name, state, &args)
+            registry.execute(&name, &args)
         }
         _ => Err("Expected MethodCall".to_string()),
     }
