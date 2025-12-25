@@ -2,7 +2,7 @@ mod interpret;
 mod types;
 mod functions;
 mod timestamp;
-mod storage;
+// mod storage; this doesn't work atm
 mod operations;
 
 use crate::functions::{handle_input, MethodRegistry};

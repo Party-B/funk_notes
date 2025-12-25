@@ -2,6 +2,14 @@ use std::fmt::Error;
 
 use crate::types::*;
 
+pub enum actions {
+
+    create,
+    delete,
+    list,
+}
+
+
 // Here we'll do all the actual function work with the types
 pub fn new_method(target: &str, action: &str) {
     // Implement the logic for the new method here

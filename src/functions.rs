@@ -387,9 +387,7 @@ fn parse_type_and_name(args: &[ASTNode]) -> Result<(String, String), String> {
 // Now each method just parses then does its thing
 fn method_new(args: &[ASTNode]) -> Result<(), String> {
     let (note_type, name) = parse_type_and_name(args)?;
-    //println!("Creating new {} with name: {}", note_type, name);
     operations::new_method(&note_type, &name);
-    // Future: operations::create_note(&note_type, &name)?;
     Ok(())
 }
 
