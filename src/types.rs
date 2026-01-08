@@ -1,11 +1,11 @@
 use crate::timestamp::now_timestamp;
 
 // ============ The Hierarchy ============
-
+#[derive(Debug, Clone)]
 pub struct Project {
     pub id: usize,
     pub title: String,
-    pub description: String,
+    pub description: String, 
     pub created_on: u64,
     pub active: bool,
     pub objects: Vec<usize>,      // IDs of child objects
