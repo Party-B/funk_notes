@@ -2,7 +2,7 @@ use crate::timestamp::now_timestamp;
 
 // ============ The Hierarchy ============
 #[derive(Debug, Clone)]
-pub struct Project {
+pub struct Funknote {
     pub id: usize,
     pub title: String,
     pub description: String, 

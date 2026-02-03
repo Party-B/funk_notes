@@ -61,6 +61,20 @@ impl MethodRegistry {
             ],
             method_new
         );
+
+        registry.register_with_spec(
+            "show_project",
+            vec![
+                // First arg must be literal (name)
+                ArgSpec::Literal,
+            ],
+            vec![],
+            "Displays the specified project by name.",
+            vec![
+                "show_project(\"My Project\")      # Displays the project".to_string(),
+            ],
+            show_project
+        );
        
         registry.register_with_spec(
             "delete",
@@ -398,6 +412,18 @@ fn method_delete(args: &[ASTNode]) -> Result<(), String> {
     Ok(())
 }
 
+fn show_project(args: &[ASTNode]) -> Result<(), String> {
+    // Validation already done by registry
+    if let ASTNode::Literal(name) = &args[0] {
+        
+        println!("Showing project with name: {}", name);
+        // Goes to operations to fetch and display
+        Ok(())
+    } else {
+        Err("show_project() expects a string literal".to_string())
+    }
+}
+
 fn method_list(args: &[ASTNode]) -> Result<(), String> {
     let (note_type, name) = parse_type_and_name(args)?;
     println!("Listing children of {} with name: {}", note_type, name);
@@ -438,5 +464,35 @@ fn execute_method(node: ASTNode, registry: &MethodRegistry) -> Result<(), String
             registry.execute(&name, &args)
         }
         _ => Err("Expected MethodCall".to_string()),
+    }
+}
+
+
+// ================== TESTS ===================
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::interpret::interpret;
+
+    #[test]
+    fn test_show_project_with_literal() {
+        let registry = MethodRegistry::new();
+        let input = "show_project(\"Test Project\")";
+        let ast = interpret(input).expect("Failed to parse input");
+        // This should not panic or return error
+        let result = match ast {
+            ASTNode::MethodCall { name, args } => registry.execute(&name, &args),
+            ASTNode::MethodChain(calls) => {
+                let mut last = Ok(());
+                for call in calls {
+                    if let ASTNode::MethodCall { name, args } = call {
+                        last = registry.execute(&name, &args);
+                    }
+                }
+                last
+            }
+            _ => Err("Unexpected AST".to_string()),
+        };
+        assert!(result.is_ok(), "show_project failed: {:?}", result);
     }
 }

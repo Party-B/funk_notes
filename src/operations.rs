@@ -2,6 +2,7 @@ use std::fmt::Error;
 
 use crate::timestamp::now_timestamp;
 use crate::types::*;
+use crate::storage::*;
 
 pub enum actions {
 
@@ -9,19 +10,6 @@ pub enum actions {
     delete,
     list,
 }
-
-pub enum Note {
-    Project(Project),
-    Object(Object),
-    Item(Item),
-    Milestone(Milestone),   
-}
-
-pub struct Operations {
-    notes: Vec<Note>,
-
-}
-
 
 // Here we'll do all the actual function work with the types
 pub fn new_method(target_object: &str, title: &str) {
@@ -32,7 +20,7 @@ pub fn new_method(target_object: &str, title: &str) {
 
     match target_object {
         "project" => {
-            let new_project = Project {
+            let new_project = Funknote {
                 id: 0, // This would be generated
                 title: title.to_string(),
                 description: String::new(),
@@ -41,6 +29,7 @@ pub fn new_method(target_object: &str, title: &str) {
                 objects: Vec::new(),
                 milestones: Vec::new(),
             };
+            write_funknote_to_file(&new_project).expect("Failed to write new project to storage");
             println!("New project created: {:?}", new_project);
         }
         "object" => println!("Creating a new object with title '{}'", title),
@@ -49,4 +38,10 @@ pub fn new_method(target_object: &str, title: &str) {
         _ => println!("Invalid target object: {}", target_object),
     }
     
+}
+
+pub fn show_current_project() -> Result<(), Error> {
+    // Display the current project from the vector of projects
+    println!("Displaying the current project...");
+    Ok(())  
 }

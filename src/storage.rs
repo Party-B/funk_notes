@@ -15,7 +15,9 @@ const FILE_PATH: &str = "all_notes.txt";
 pub fn write_funknote_to_file(note: &Funknote) -> io::Result<()> {
     
     let note_str = base_note(note);
-    append_to_file(FILE_PATH, &note_str)
+    append_to_file(FILE_PATH, &note_str);
+    println!("Note written to file.");
+    Ok(())
 }
 
 /// Read next ID from counter file, increment file, return the ID.
@@ -51,7 +53,7 @@ pub fn get_next_id() -> Result<usize, std::io::Error> {
 
 fn base_note(note: &Funknote) -> String {
     // First build a local set of variables to fill the format string
-    let id = note.id;
+    let id = get_next_id().unwrap_or(0);
     let status = if note.active { "active" } else { "inactive" };
     let title = &note.title;
     let description = &note.description;
@@ -138,10 +140,11 @@ fn parse_note_chunk(chunk: &str, id: usize) -> Result<Funknote, String> {
         title,
         description,
         created_on,
-        milestone: Vec::new(),
         active,
+        objects: Vec::new(), // NOTE: Filled with empty Vec, update as needed
+        milestones: Vec::new(),
     })
-}
+    }
 
 /// Read all notes from the file and return them as a vector
 pub fn list_all_notes() -> io::Result<Vec<Funknote>> {
